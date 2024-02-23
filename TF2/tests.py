@@ -1,6 +1,7 @@
 import numpy as np
 import tensorflow as tf
 import pdb
+from scipy import sparse as sp
 
 
 ident = lambda x: x
