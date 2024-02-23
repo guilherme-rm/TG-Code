@@ -20,17 +20,17 @@ import sys
 from collections import defaultdict
 import pdb
 
+parser = argparse.ArgumentParser(description='Description of your script')
 
-tf.compat.v1.flags.DEFINE_integer('num_epochs', 25, 'number of epochs to train')
-tf.compat.v1.flags.DEFINE_integer('batch_size', 1, 'batch size to train in one step')
-tf.compat.v1.flags.DEFINE_integer('labels', 1, 'number of label classes')
-tf.compat.v1.flags.DEFINE_integer('word_pad_length', 4438, 'word pad length for training')
-tf.compat.v1.flags.DEFINE_integer('decay_step', 500, 'decay steps')
-tf.compat.v1.flags.DEFINE_float('learn_rate', 1e-2, 'learn rate for training optimization')
-tf.compat.v1.flags.DEFINE_boolean('train', False, 'train mode FLAG')
-tf.compat.v1.flags.DEFINE_string('f','','')
+parser.add_argument('--num_epochs', type=int, default=25, help='Number of epochs to train')
+parser.add_argument('--batch_size', type=int, default=1, help='Batch size to train in one step')
+parser.add_argument('--labels', type=int, default=1, help='Number of label classes')
+parser.add_argument('--word_pad_length', type=int, default=4438, help='Word pad length for training')
+parser.add_argument('--decay_step', type=int, default=500, help='Decay steps')
+parser.add_argument('--learn_rate', type=float, default=1e-2, help='Learn rate for training optimization')
+parser.add_argument('--train', type=bool, default=False, help='Train mode FLAG')
 
-FLAGS = tf.compat.v1.flags.FLAGS
+FLAGS = parser.parse_args()
 
 num_epochs = FLAGS.num_epochs
 batch_size = FLAGS.batch_size
@@ -43,6 +43,7 @@ num_path = 200
 max_path_len = 49
 
 tf.compat.v1.disable_eager_execution()
+
 placeholders = {
     'support': [tf.compat.v1.sparse_placeholder(tf.float32) for _ in range(window_size)],
     'features':tf.compat.v1.placeholder(tf.float32, shape=(window_size,word_pad_length,feature_dimension)),
@@ -52,6 +53,7 @@ placeholders = {
     'path_node_index_array': tf.compat.v1.placeholder(tf.int32,shape=(num_path, max_path_len)),
     'num_features_nonzero': tf.compat.v1.placeholder(tf.int32)  # helper variable for sparse dropout
 }
+
 
 model = LRGCN()
 with tf.compat.v1.Session() as sess:
@@ -104,7 +106,7 @@ with tf.compat.v1.Session() as sess:
 
   sess.run(tf.compat.v1.global_variables_initializer())
 
-  train_tuopu_input,train_word_input,test_tuopu_input,test_word_input,ally,ty,whole_mask, path_node_index_array = load_data(window_size) 
+  train_tuopu_input,train_word_input,test_tuopu_input,test_word_input,ally,ty,whole_mask, path_node_index_array = load_data(window_size)
   idx = np.random.RandomState(seed=42).permutation(len(ally))
   train_word_input = list(map(train_word_input.__getitem__, idx))
   train_tuopu_input = list(map(train_tuopu_input.__getitem__, idx))

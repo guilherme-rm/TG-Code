@@ -23,18 +23,30 @@ class LRGCN(object):
         C = initial_state 
 
       previous_h_c_tuple = tf.stack([H,C])
-      self.GCN_layer1_i = GraphConvolution(input_dim=rgcn_output_dim,output_dim=rgcn_output_dim,placeholders=self.placeholders,act=tf.identity,dropout=True,logging=True)
-      self.GCN_layer1_f = GraphConvolution(input_dim=rgcn_output_dim,output_dim=rgcn_output_dim,placeholders=self.placeholders,act=tf.identity,dropout=True,logging=True)
-      self.GCN_layer1_o = GraphConvolution(input_dim=rgcn_output_dim,output_dim=rgcn_output_dim,placeholders=self.placeholders,act=tf.identity,dropout=True,logging=True)
-      self.GCN_layer1_c = GraphConvolution(input_dim=rgcn_output_dim,output_dim=rgcn_output_dim,placeholders=self.placeholders,act=tf.identity,dropout=True,logging=True)
-      self.GCN_layer2_1_i = GraphConvolution(input_dim=rgcn_input_dim,output_dim=hidden_dim,placeholders=self.placeholders,act=tf.identity,dropout=True,sparse_inputs=False,logging=True)
-      self.GCN_layer2_1_f = GraphConvolution(input_dim=rgcn_input_dim,output_dim=hidden_dim,placeholders=self.placeholders,act=tf.identity,dropout=True,sparse_inputs=False,logging=True)
-      self.GCN_layer2_1_o = GraphConvolution(input_dim=rgcn_input_dim,output_dim=hidden_dim,placeholders=self.placeholders,act=tf.identity,dropout=True,sparse_inputs=False,logging=True)
-      self.GCN_layer2_1_c = GraphConvolution(input_dim=rgcn_input_dim,output_dim=hidden_dim,placeholders=self.placeholders,act=tf.identity,dropout=True,sparse_inputs=False,logging=True)
-      self.GCN_layer2_2_i = GraphConvolution(input_dim=hidden_dim,output_dim=rgcn_output_dim,placeholders=self.placeholders,act=tf.identity,dropout=True,logging=False)
-      self.GCN_layer2_2_f = GraphConvolution(input_dim=hidden_dim,output_dim=rgcn_output_dim,placeholders=self.placeholders,act=tf.identity,dropout=True,logging=False)
-      self.GCN_layer2_2_o = GraphConvolution(input_dim=hidden_dim,output_dim=rgcn_output_dim,placeholders=self.placeholders,act=tf.identity,dropout=True,logging=False)
-      self.GCN_layer2_2_c = GraphConvolution(input_dim=hidden_dim,output_dim=rgcn_output_dim,placeholders=self.placeholders,act=tf.identity,dropout=True,logging=False)
+      self.GCN_layer1_i = GraphConvolution(input_dim=rgcn_output_dim, output_dim=rgcn_output_dim, placeholders=self.placeholders,
+                                           act=tf.identity,dropout=True,logging=True)
+      self.GCN_layer1_f = GraphConvolution(input_dim=rgcn_output_dim, output_dim=rgcn_output_dim, placeholders=self.placeholders,
+                                           act=tf.identity,dropout=True,logging=True)
+      self.GCN_layer1_o = GraphConvolution(input_dim=rgcn_output_dim, output_dim=rgcn_output_dim, placeholders=self.placeholders,
+                                           act=tf.identity,dropout=True,logging=True)
+      self.GCN_layer1_c = GraphConvolution(input_dim=rgcn_output_dim, output_dim=rgcn_output_dim, placeholders=self.placeholders,
+                                           act=tf.identity,dropout=True,logging=True)
+      self.GCN_layer2_1_i = GraphConvolution(input_dim=rgcn_input_dim, output_dim=hidden_dim, placeholders=self.placeholders,
+                                             act=tf.identity,dropout=True,sparse_inputs=False,logging=True)
+      self.GCN_layer2_1_f = GraphConvolution(input_dim=rgcn_input_dim, output_dim=hidden_dim, placeholders=self.placeholders,
+                                             act=tf.identity,dropout=True,sparse_inputs=False,logging=True)
+      self.GCN_layer2_1_o = GraphConvolution(input_dim=rgcn_input_dim, output_dim=hidden_dim, placeholders=self.placeholders,
+                                             act=tf.identity,dropout=True,sparse_inputs=False,logging=True)
+      self.GCN_layer2_1_c = GraphConvolution(input_dim=rgcn_input_dim, output_dim=hidden_dim, placeholders=self.placeholders,
+                                             act=tf.identity,dropout=True,sparse_inputs=False,logging=True)
+      self.GCN_layer2_2_i = GraphConvolution(input_dim=hidden_dim, output_dim=rgcn_output_dim, placeholders=self.placeholders
+                                             ,act=tf.identity,dropout=True,logging=False)
+      self.GCN_layer2_2_f = GraphConvolution(input_dim=hidden_dim, output_dim=rgcn_output_dim, placeholders=self.placeholders,
+                                             act=tf.identity,dropout=True,logging=False)
+      self.GCN_layer2_2_o = GraphConvolution(input_dim=hidden_dim, output_dim=rgcn_output_dim, placeholders=self.placeholders,
+                                             act=tf.identity,dropout=True,logging=False)
+      self.GCN_layer2_2_c = GraphConvolution(input_dim=hidden_dim, output_dim=rgcn_output_dim, placeholders=self.placeholders,
+                                             act=tf.identity,dropout=True,logging=False)
       inputs = inputs
       outputs = []
 
@@ -77,32 +89,26 @@ class LRGCN(object):
     return outputs,H
       
   def build_graph(self, placeholders, n=626, d=2, u=8, d_a=32, r=10, window_size=24,reuse=False):
-    with tf.compat.v1.variable_scope('LRGCN', reuse=reuse):
-      self.n = n
-      self.d = d
-      self.d_a = d_a
-      self.u = u
-      self.r = r
-      self.window_size = window_size
+   
+    self.n = n
+    self.d = d
+    self.d_a = d_a
+    self.u = u
+    self.r = r
+    self.window_size = window_size
 
-      initializer = tf.keras.initializers.he_normal()
+    initializer = tf.keras.initializers.he_normal()
 
-      self.placeholders = placeholders
-      self.input_F = placeholders['features']
-      self.tuopu = placeholders['support']
-      _,self.H = self.lstm_rgcn(initial_state = None,inputs = self.input_F,tuopu = self.tuopu, rgcn_input_dim = self.d,rgcn_output_dim = self.u)
-      self.W_s1 = tf.compat.v1.get_variable('W_s1', shape=[self.d_a, self.u],
-          initializer=initializer)
-      self.W_s2 = tf.compat.v1.get_variable('W_s2', shape=[self.r, self.d_a],
-          initializer=initializer)
-      self.batch_size = batch_size = tf.shape(self.input_F)[0]
-      self.A = A = tf.nn.softmax(tf.matmul(self.W_s2, tf.tanh(tf.matmul(self.W_s1, tf.transpose(self.H)))))
-      self.M = tf.matmul(A, self.H)
-      out_num = 8
-      self.out_Mb = tf.compat.v1.get_variable('out_Mb', shape=[self.n, self.r],initializer=initializer)
-      initial_s = tf.matmul(self.out_Mb,self.M)      
-      self.outputs,self.H2 = self.lstm_rgcn(initial_state = initial_s,inputs = self.input_F,tuopu = self.tuopu, rgcn_input_dim = self.d,rgcn_output_dim = out_num,zero_start = False)
-
-  def trainable_vars(self):
-    return [var for var in
-        tf.compat.v1.get_collection(tf.compat.v1.GraphKeys.GLOBAL_VARIABLES, scope='LRGCN')]
+    self.placeholders = placeholders
+    self.input_F = placeholders['features']
+    self.tuopu = placeholders['support']
+    _,self.H = self.lstm_rgcn(initial_state = None,inputs = self.input_F,tuopu = self.tuopu, rgcn_input_dim = self.d,rgcn_output_dim = self.u)
+    self.W_s1 = tf.Variable(initializer(shape=(self.d_a, self.u)), name='W_s1')
+    self.W_s2 = tf.Variable(initializer(shape=(self.r, self.d_a)), name='W_s2')
+    self.batch_size = tf.shape(self.input_F)[0]
+    self.A = A = tf.nn.softmax(tf.matmul(self.W_s2, tf.tanh(tf.matmul(self.W_s1, tf.transpose(self.H)))))
+    self.M = tf.matmul(A, self.H)
+    out_num = 8
+    self.out_Mb = tf.Variable(initializer(shape=(self.n, self.r)), name='out_Mb')
+    initial_s = tf.matmul(self.out_Mb,self.M)      
+    self.outputs,self.H2 = self.lstm_rgcn(initial_state = initial_s,inputs = self.input_F,tuopu = self.tuopu, rgcn_input_dim = self.d,rgcn_output_dim = out_num,zero_start = False)

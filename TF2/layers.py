@@ -1,9 +1,6 @@
 from inits import *
 import tensorflow as tf
 
-flags = tf.compat.v1.flags
-FLAGS = flags.FLAGS
-
 # global unique layer ID dictionary for layer name assignment
 _LAYER_UIDS = {}
 
@@ -87,11 +84,7 @@ class Dense(Layer):
                  act=tf.nn.relu, bias=False, featureless=False, **kwargs):
         super(Dense, self).__init__(**kwargs)
 
-        if dropout:
-            self.dropout = placeholders['dropout']
-        else:
-            self.dropout = 0.
-
+        self.dropout = dropout
         self.act = act
         self.sparse_inputs = sparse_inputs
         self.featureless = featureless
@@ -119,11 +112,7 @@ class GraphConvolution(Layer):
                  featureless=False, **kwargs):
         super(GraphConvolution, self).__init__(**kwargs)
 
-        if dropout:
-            self.dropout = placeholders['dropout']
-        else:
-            self.dropout = 0.
-
+        self.dropout = dropout
         self.act = act
         self.support = placeholders['support']
         self.sparse_inputs = sparse_inputs
