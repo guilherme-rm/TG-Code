@@ -9,9 +9,8 @@ def uniform(shape, scale=0.05, name=None):
 
 
 def glorot(shape, name=None):
-    """Glorot & Bengio (AISTATS 2010) init."""
     initializer = tf.keras.initializers.he_normal()
-    return tf.compat.v1.get_variable(name=name,shape=shape,initializer=initializer)
+    return tf.Variable(initializer(shape), name=name)
 
 
 def zeros(shape, name=None):

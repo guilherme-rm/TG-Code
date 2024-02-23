@@ -15,10 +15,10 @@ from scipy import sparse
 import pickle as pkl
 import networkx as nx
 from load_data import load_data
+import argparse
 import sys
 from collections import defaultdict
 import pdb
-
 
 
 tf.compat.v1.flags.DEFINE_integer('num_epochs', 25, 'number of epochs to train')
@@ -88,10 +88,11 @@ with tf.compat.v1.Session() as sess:
     fc_weights_stack = tf.tile(tf.expand_dims(fc_weights, 0), [num_path, 1, 1])
     logits = tf.reshape(tf.matmul(path_output,fc_weights_stack),[-1])
     print("---\n logits shape: {}\n----".format(logits.shape))
-    loss = tf.nn.weighted_cross_entropy_with_logits(labels=labels, logits=logits,pos_weight = 3.) ##depreciated
+    loss = tf.nn.weighted_cross_entropy_with_logits(labels=labels, logits=logits,pos_weight = 3.) 
     loss = tf.reduce_mean(loss)
     params = tf.compat.v1.trainable_variables()
     optimizer = tf.compat.v1.train.AdamOptimizer(learn_rate)
+    #optimizer2 = tf.keras.optimizers.Adam()
     grad_and_vars = tf.gradients(loss, params)
     clipped_gradients, _ = tf.clip_by_global_norm(grad_and_vars, 1)
     opt = optimizer.apply_gradients(zip(clipped_gradients, params), global_step=global_step)

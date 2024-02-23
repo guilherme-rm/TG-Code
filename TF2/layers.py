@@ -28,9 +28,8 @@ def sparse_dropout(x, keep_prob, noise_shape):
 
 
 def dot(x, y, sparse=False):
-    """Wrapper for tf.matmul (sparse vs dense)."""
     if sparse:
-        res = tf.compat.v1.sparse_tensor_dense_matmul(x, y)
+        res = tf.sparse.sparse_dense_matmul(x, y)
     else:
         res = tf.matmul(x, y)
     return res
@@ -101,32 +100,16 @@ class Dense(Layer):
         # helper variable for sparse dropout
         self.num_features_nonzero = placeholders['num_features_nonzero']
 
-        with tf.compat.v1.variable_scope(self.name + '_vars'):
-            self.vars['weights'] = glorot([input_dim, output_dim],
-                                          name='weights')
-            if self.bias:
-                self.vars['bias'] = zeros([output_dim], name='bias')
+        self.dense_layer = tf.keras.layers.Dense(output_dim, activation=self.act, use_bias=self.bias,
+                                                  kernel_initializer=tf.keras.initializers.GlorotUniform(),
+                                                  name='dense')
 
-        if self.logging:
-            self._log_vars()
 
     def _call(self, inputs):
-        x = inputs
-
-        # dropout
-        if self.sparse_inputs:
-            x = sparse_dropout(x, 1-self.dropout, self.num_features_nonzero)
-        else:
-            x = tf.nn.dropout(x, 1-self.dropout)
-
-        # transform
-        output = dot(x, self.vars['weights'], sparse=self.sparse_inputs)
-
-        # bias
-        if self.bias:
-            output += self.vars['bias']
-
-        return self.act(output)
+        output = self.dense_layer(inputs)
+        if self.dropout > 0.:
+            output = tf.nn.dropout(output, rate=self.dropout)
+        return output
 
 
 class GraphConvolution(Layer):
@@ -150,18 +133,16 @@ class GraphConvolution(Layer):
         # helper variable for sparse dropout
         self.num_features_nonzero = placeholders['num_features_nonzero']
 
-        with tf.compat.v1.variable_scope(self.name + '_vars'):
-            for i in range(1):
-            #for i in range(len(self.support)):
-                self.vars['weights_' + str(i)] = glorot([input_dim, output_dim],
-                                                        name='weights_' + str(i))
-            if self.bias:
-                self.vars['bias'] = zeros([output_dim], name='bias')
+        for i in range(1):
+            self.vars['weights_' + str(i)] = glorot([input_dim, output_dim],
+                                                     name='weights_' + str(i))
+        if self.bias:
+            self.vars['bias'] = zeros([output_dim], name='bias')
 
         if self.logging:
             self._log_vars()
 
-    def _call(self, inputs,tuopu):
+    def _call(self, inputs, tuopu):
         x = inputs
 
         # dropout
@@ -171,16 +152,14 @@ class GraphConvolution(Layer):
             x = tf.nn.dropout(x, 1-self.dropout)
 
         # convolve
-        supports = list()
+        supports = []
         for i in range(1):
-        #for i in range(len(self.support)):
             if not self.featureless:
                 pre_sup = dot(x, self.vars['weights_' + str(i)],
                               sparse=self.sparse_inputs)
             else:
                 pre_sup = self.vars['weights_' + str(i)]
             support = dot(tuopu, pre_sup, sparse=True)
-            #support = dot(self.support[i], pre_sup, sparse=True)
             supports.append(support)
         output = tf.add_n(supports)
 
@@ -189,4 +168,3 @@ class GraphConvolution(Layer):
             output += self.vars['bias']
 
         return self.act(output)
-
