@@ -1,5 +1,6 @@
 from layers import *
 import tensorflow as tf
+import pdb
 
 
 class LRGCN(object):
@@ -49,7 +50,7 @@ class LRGCN(object):
                                              act=tf.identity,dropout=True,logging=False)
       inputs = inputs
       outputs = []
-
+      
       for i in range(self.window_size):
         
         adj_time = tuopu[i]
@@ -102,7 +103,7 @@ class LRGCN(object):
     self.placeholders = placeholders
     self.input_F = placeholders['features']
     self.tuopu = placeholders['support']
-    _,self.H = self.lstm_rgcn(initial_state = None,inputs = self.input_F,tuopu = self.tuopu, rgcn_input_dim = self.d,rgcn_output_dim = self.u)
+    _,self.H = self.lstm_rgcn(initial_state = None, inputs = self.input_F, tuopu = self.tuopu, rgcn_input_dim = self.d, rgcn_output_dim = self.u)
     self.W_s1 = tf.Variable(initializer(shape=(self.d_a, self.u)), name='W_s1')
     self.W_s2 = tf.Variable(initializer(shape=(self.r, self.d_a)), name='W_s2')
     self.batch_size = tf.shape(self.input_F)[0]

@@ -20,7 +20,7 @@ import sys
 from collections import defaultdict
 import pdb
 
-parser = argparse.ArgumentParser(description='Description of your script')
+parser = argparse.ArgumentParser()
 
 parser.add_argument('--num_epochs', type=int, default=25, help='Number of epochs to train')
 parser.add_argument('--batch_size', type=int, default=1, help='Batch size to train in one step')
@@ -44,6 +44,7 @@ max_path_len = 49
 
 tf.compat.v1.disable_eager_execution()
 
+"""
 placeholders = {
     'support': [tf.compat.v1.sparse_placeholder(tf.float32) for _ in range(window_size)],
     'features':tf.compat.v1.placeholder(tf.float32, shape=(window_size,word_pad_length,feature_dimension)),
@@ -53,57 +54,77 @@ placeholders = {
     'path_node_index_array': tf.compat.v1.placeholder(tf.int32,shape=(num_path, max_path_len)),
     'num_features_nonzero': tf.compat.v1.placeholder(tf.int32)  # helper variable for sparse dropout
 }
+"""
+placeholders = {
+    'support': [tf.compat.v1.sparse_placeholder(tf.float32) for _ in range(window_size)],
+    'features':np.empty(shape=(window_size,word_pad_length,feature_dimension), dtype=np.float32),
+    'labels': np.empty(shape=(num_path,), dtype=np.float32),
+    'labels_mask': np.empty(shape=(num_path,word_pad_length), dtype=np.int32),
+    'dropout': np.empty(shape=()),
+    'path_node_index_array': np.empty(shape=(num_path, max_path_len), dtype=np.int32),
+    'num_features_nonzero': 0  # helper variable for sparse dropout
+}
 
 
 model = LRGCN()
 with tf.compat.v1.Session() as sess:
   # build graph
   model.build_graph(n=word_pad_length,placeholders = placeholders,d =feature_dimension)
-  # Downstream Application
-  with tf.compat.v1.variable_scope('DownstreamApplication'):
-    global_step = tf.Variable(0, trainable=False, name='global_step')
-    learn_rate = tf.compat.v1.train.exponential_decay(lr, global_step, FLAGS.decay_step, 0.98, staircase=True)
-    labels = placeholders['labels']
-    Mask = placeholders['labels_mask']
-    initializer = tf.keras.initializers.he_normal()
-    print("---\n model.H2 shape: {}\n----".format(model.H2.shape))
-    zero_padding = tf.constant(0.0, shape=[1, 8])
-    rnn_input = tf.nn.embedding_lookup(tf.concat([model.H2, zero_padding], 0), placeholders['path_node_index_array'])
-    sub_w11 = tf.compat.v1.get_variable(name='sub_w11',shape=(32,8),initializer=initializer)
-    sub_w22 = tf.compat.v1.get_variable(name='sub_w22',shape=(8,32),initializer=initializer)
-    lstm_cell = tf.compat.v1.nn.rnn_cell.LSTMCell(8)
-    outputs,last_states=   tf.compat.v1.nn.dynamic_rnn(cell = lstm_cell,inputs = rnn_input, dtype = tf.float32)
-    print("---\n outputs shape: {}\n----".format(outputs.shape))
-    outputs_trans = tf.transpose(outputs, perm=[0, 2, 1])
-    print("---\n outputs_trans shape: {}\n----".format(outputs_trans.shape))    
-    sub_w11_stack = tf.tile(tf.expand_dims(sub_w11, 0), [num_path, 1, 1])
-    sub_w22_stack = tf.tile(tf.expand_dims(sub_w22, 0), [num_path, 1, 1])
-    attention_path = tf.nn.softmax(tf.matmul(sub_w22_stack, tf.tanh(tf.matmul(sub_w11_stack, outputs_trans))))
-    print("---\n attention_path shape: {}\n----".format(attention_path.shape))
-
-    path_output = tf.matmul(attention_path, outputs)
-    print("---\n path_output shape: {}\n----".format(path_output.shape))
-    path_output = tf.reshape(path_output, [num_path, 1, 8*8])
-    print("---\n path_output shape: {}\n----".format(path_output.shape))
-    initializer = tf.keras.initializers.he_normal()
-    fc_weights = tf.compat.v1.get_variable(name='fc_weights',shape=(64,1),initializer=initializer)
-    fc_weights_stack = tf.tile(tf.expand_dims(fc_weights, 0), [num_path, 1, 1])
-    logits = tf.reshape(tf.matmul(path_output,fc_weights_stack),[-1])
-    print("---\n logits shape: {}\n----".format(logits.shape))
-    loss = tf.nn.weighted_cross_entropy_with_logits(labels=labels, logits=logits,pos_weight = 3.) 
-    loss = tf.reduce_mean(loss)
-    params = tf.compat.v1.trainable_variables()
-    optimizer = tf.compat.v1.train.AdamOptimizer(learn_rate)
-    #optimizer2 = tf.keras.optimizers.Adam()
-    grad_and_vars = tf.gradients(loss, params)
-    clipped_gradients, _ = tf.clip_by_global_norm(grad_and_vars, 1)
-    opt = optimizer.apply_gradients(zip(clipped_gradients, params), global_step=global_step)
-    print("HERE3")
   
+  global_step = tf.Variable(0, trainable=False, name='global_step')
+  #learn_rate = tf.keras.optimizers.schedules.ExponentialDecay(lr, FLAGS.decay_step, 0.98, staircase=True)
+  learn_rate = tf.compat.v1.train.exponential_decay(lr, global_step, FLAGS.decay_step, 0.98, staircase=True)
+  labels = placeholders['labels']
+  Mask = placeholders['labels_mask']
+  initializer = tf.keras.initializers.he_normal()
+  print("---\n model.H2 shape: {}\n----".format(model.H2.shape))
+  zero_padding = tf.constant(0.0, shape=[1, 8])
+  rnn_input = tf.nn.embedding_lookup(tf.concat([model.H2, zero_padding], 0), placeholders['path_node_index_array'])
+  sub_w11 = tf.Variable(initializer(shape=(32, 8)), name='sub_w11')
+  sub_w22 = tf.Variable(initializer(shape=(8, 32)), name='sub_w22')
+  lstm_cell = tf.keras.layers.LSTMCell(8)
+  outputs,last_states=   tf.compat.v1.nn.dynamic_rnn(cell = lstm_cell,inputs = rnn_input, dtype = tf.float32)
+  
+  rnn = tf.keras.layers.RNN(lstm_cell)
+  outputs2 = rnn(rnn_input)
+
+  pdb.set_trace()
+
+  print("---\n outputs shape: {}\n----".format(outputs.shape))
+  outputs_trans = tf.transpose(outputs, perm=[0, 2, 1])
+  print("---\n outputs_trans shape: {}\n----".format(outputs_trans.shape))    
+  sub_w11_stack = tf.tile(tf.expand_dims(sub_w11, 0), [num_path, 1, 1])
+  sub_w22_stack = tf.tile(tf.expand_dims(sub_w22, 0), [num_path, 1, 1])
+  attention_path = tf.nn.softmax(tf.matmul(sub_w22_stack, tf.tanh(tf.matmul(sub_w11_stack, outputs_trans))))
+  print("---\n attention_path shape: {}\n----".format(attention_path.shape))
+
+  path_output = tf.matmul(attention_path, outputs)
+  print("---\n path_output shape: {}\n----".format(path_output.shape))
+  path_output = tf.reshape(path_output, [num_path, 1, 8*8])
+  print("---\n path_output shape: {}\n----".format(path_output.shape))
+  initializer = tf.keras.initializers.he_normal()
+  fc_weights = tf.Variable(initializer(shape=(64, 1)), name='fc_weights')
+  fc_weights_stack = tf.tile(tf.expand_dims(fc_weights, 0), [num_path, 1, 1])
+  logits = tf.reshape(tf.matmul(path_output,fc_weights_stack),[-1])
+  print("---\n logits shape: {}\n----".format(logits.shape))
+  loss = tf.nn.weighted_cross_entropy_with_logits(labels=labels, logits=logits,pos_weight = 3.) 
+  loss = tf.reduce_mean(loss)
+  params = tf.compat.v1.trainable_variables()
+  optimizer = tf.compat.v1.train.AdamOptimizer(learn_rate)
+  #optimizer = tf.keras.optimizers.Adam(learn_rate)
+  grad_and_vars = tf.gradients(loss, params)
+  clipped_gradients, _ = tf.clip_by_global_norm(grad_and_vars, 1)
+  opt = optimizer.apply_gradients(zip(clipped_gradients, params), global_step=global_step)
+  print("HERE3")
+
+
+  """
+
   def model_summary():
     model_vars = tf.compat.v1.trainable_variables()
     slim.model_analyzer.analyze_vars(model_vars, print_info=True)
-
+  
+  """
   sess.run(tf.compat.v1.global_variables_initializer())
 
   train_tuopu_input,train_word_input,test_tuopu_input,test_word_input,ally,ty,whole_mask, path_node_index_array = load_data(window_size)
@@ -119,7 +140,7 @@ with tf.compat.v1.Session() as sess:
   train_tuopu_input = train_tuopu_input[:-validation_size]
   ally = ally[:-validation_size]
 
-  step_print = 1
+  step_print = 100
   
   total = len(train_word_input)
   vtotal = len(vtrain_word_input)
@@ -197,7 +218,9 @@ with tf.compat.v1.Session() as sess:
     saver = tf.compat.v1.train.Saver()
     saver.restore(sess, "./pretrained/model.ckpt") # load the pretrained model
   
-  
+  #########################################################################################################
+    
+
   total = len(test_word_input)
   for i in range(int(total)):
      test_word_input[i] = test_word_input[i].reshape((-1,test_word_input[i].shape[1]*test_word_input[i].shape[2]))
