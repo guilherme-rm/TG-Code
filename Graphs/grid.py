@@ -8,6 +8,9 @@ import torch
 
 matplotlib.use('TkAgg')
 
+def save_fig(name):
+    plt.savefig('Graphs/images/' + name + '.png', format='png', dpi=400)
+
 def weight_nodes(graph: nx.Graph, mu=0.0, sigma=1.0, seed=42, init=False):
     np.random.seed(seed)
     if init:
@@ -33,32 +36,32 @@ def get_shortest_path(g:nx.Graph, source, target):
     edges_path = list(zip(path,path[1:]))
     return edges_path
 
-def draw_graph(g, path0, path1):
+def draw_graph(g, path0, path1, path_color = True, show=False):
     plt.figure(figsize=(10, 10))
     pos = {(x,y):(y,-x) for x,y in g.nodes()}
     weight_labels = nx.get_edge_attributes(g,'weight')
     edge_colors = []
     for edge in g.edges():
-        if edge in path0:
+        if edge in path0 and path_color:
             edge_colors.append('red')
-        elif edge in path1:
+        elif edge in path1 and path_color:
             edge_colors.append('blue')
         else: edge_colors.append('black')
 
     nx.draw(g, pos=pos, 
-            node_color='lightgreen',
             edge_color=edge_colors, 
             with_labels=True,
             node_size=600)
     nx.draw_networkx_edge_labels(g,pos,edge_labels=weight_labels)
 
-    plt.show()
+    if show:
+        plt.show()
 
 def draw_graph_anim(ax, g, path0, path1):
     
     pos = {(x,y):(y,-x) for x,y in g.nodes()}
     weight_labels = nx.get_edge_attributes(g,'weight')
-    edge_colors = []
+    edge_colors = []                                                                                                  
     for edge in g.edges():
         if edge in path0:
             edge_colors.append('red')

@@ -37,7 +37,6 @@ n_bases = 1
 
 model = LRGCN(n_in, n_out, n_rel, n_bases)
 
-pdb.set_trace()
-
 train_tuopu_input,train_word_input,test_tuopu_input,test_word_input,ally,ty,whole_mask, path_node_index_array = load_data(params['window_size'])
 
+pdb.set_trace()
